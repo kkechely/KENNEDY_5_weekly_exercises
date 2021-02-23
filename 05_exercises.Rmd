@@ -249,6 +249,40 @@ knitr::include_graphics("Triathalon.gif")
   * Use the `animate()` function to have 200 frames in your animation and make it 30 seconds long. 
   * Comment on what you observe.
   
+  I notice that the lines that were originally on top on the static plot move change a lot faster on the animated plot. You can't really see the growth rate on the static plot, but animating it helps with that.
+  
+```{r, eval = FALSE}
+
+covid_anim <- covid19 %>%
+  group_by(state) %>% 
+  mutate(lag7 = lag(cases, 7),
+         lag7 = replace_na(lag7, 0),
+         new_cases = cases- lag7) %>% 
+  filter(cases >= 20) %>% 
+ 
+  ggplot(aes(x = cases, y = new_cases)) +
+  geom_path(aes(group = state)) +
+  scale_x_log10(labels = scales::comma) +
+  scale_y_log10(labels = scales::comma) +
+  transition_reveal(date) +
+  geom_point(aes(group = state, color = "blue")) +
+  geom_text(aes(label = state),
+            check_overlap = TRUE) +
+  labs(title = "COVID-19 Cases by State",
+       subtitle = "Date: {frame_along}",
+       x = "Cumulative Case Count",
+       y = "New Cases in Last Week")
+
+animate(covid_anim, duration = 30, nframes = 200)
+
+anim_save("CovidAnim.gif")
+  
+```
+  
+```{r}
+knitr::include_graphics("CovidAnim.gif")
+```
+  
   7. In this exercise you will animate a map of the US, showing how cumulative COVID-19 cases per 10,000 residents has changed over time. This is similar to exercises 11 & 12 from the previous exercises, with the added animation! So, in the end, you should have something like the static map you made there, but animated over all the days. The code below gives the population estimates for each state and loads the `states_map` data. Here is a list of details you should include in the plot:
   
   * Put date in the subtitle.   
@@ -257,7 +291,7 @@ knitr::include_graphics("Triathalon.gif")
   * Use `group = date` in `aes()`.   
   * Comment on what you see.  
 
-
+I think the most interesting part of this animation is being able to see which states recorded cases first and how the rest of the states catch up to them.
 ```{r}
 census_pop_est_2018 <- read_csv("https://www.dropbox.com/s/6txwv3b4ng7pepe/us_census_2018_state_pop_est.csv?dl=1") %>% 
   separate(state, into = c("dot","state"), extra = "merge") %>% 
@@ -265,6 +299,38 @@ census_pop_est_2018 <- read_csv("https://www.dropbox.com/s/6txwv3b4ng7pepe/us_ce
   mutate(state = str_to_lower(state))
 
 states_map <- map_data("state")
+
+covid_with_2018_pop_est <-
+  covid19 %>% 
+  mutate(wkday = wday(date, label = TRUE)) %>% 
+  filter(wkday == "Fri") %>% 
+  mutate(state = str_to_lower(state)) %>% 
+  left_join(census_pop_est_2018,
+            by = c("state" = "state")) %>% 
+  mutate(cases_per_10000 = (cases/est_pop_2018)*10000) 
+
+
+```
+
+```{r, eval = FALSE}
+covidmapanim <- ggplot(data = covid_with_2018_pop_est) +
+  geom_map(map = states_map,
+           aes(map_id = state,
+               fill = cases_per_10000,
+               group = date)) +
+  expand_limits(x = states_map$long, y = states_map$lat) + 
+  theme_map() +
+  labs(title = "Cumulative Number of COVID 19 Cases per 10,000 People",
+       subtitle = "Date: {frame_time}") +
+  transition_time(date)
+
+animate(covidmapanim, nframes = 200, end_pause = 10)
+
+anim_save("CovidStates.gif")
+```
+
+```{r}
+knitr::include_graphics("CovidStates.gif")
 ```
 
 ## Your first `shiny` app (for next week!)
