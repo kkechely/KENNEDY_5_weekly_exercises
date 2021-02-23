@@ -123,6 +123,9 @@ small_trains %>%
   transition_reveal(month)
 
 anim_save("SmallTrains1.gif")
+```
+
+```{r}
 knitr::include_graphics("SmallTrains1.gif")
 ```
 
@@ -136,14 +139,29 @@ knitr::include_graphics("SmallTrains1.gif")
 
 I have started the code for you below. The `complete()` function creates a row for all unique `date`/`variety` combinations. If a variety is not harvested on one of the harvest dates in the dataset, it is filled with a value of 0.
 
-```{r}
+```{r, eval = FALSE}
 garden_harvest %>% 
   filter(vegetable == "tomatoes") %>% 
   group_by(date, variety) %>% 
   summarize(daily_harvest_lb = sum(weight)*0.00220462) %>% 
   ungroup() %>% 
-  complete(variety, date, fill = list(daily_harvest_lb = 0))
+  complete(variety, date, fill = list(daily_harvest_lb = 0)) %>% 
+  group_by(variety) %>% 
+  mutate(cum_weight_var = cumsum(daily_harvest_lb)) %>% 
+  ggplot(aes(x = date)) +
+  geom_area(aes(y = cum_weight_var, fill = variety)) +
+  labs(title = "Cumulative Weight (lbs) of Tomatoes by Variety",
+       x = "",
+       y= "")+
+  transition_reveal(date)
+
+anim_save("CumGardenWeight.gif")
 ```
+
+```{r}
+knitr::include_graphics("CumGardenWeight.gif")
+```
+
 
 
 ## Maps, animation, and movement!
@@ -157,6 +175,35 @@ garden_harvest %>%
   * Show the time in the subtitle.  
   * CHALLENGE: use the `ggimage` package and `geom_image` to add a bike image instead of a red point. You can use [this](https://raw.githubusercontent.com/llendway/animation_and_interactivity/master/bike.png) image. See [here](https://goodekat.github.io/presentations/2019-isugg-gganimate-spooky/slides.html#35) for an example. 
   * Add something of your own! And comment on if you prefer this to the static map and why or why not.
+  
+  I prefer this to the static map because I can see the direction of the path. Since the path starts and ends at the same spot, it just looks like a circle on the static map. 
+  
+```{r, eval = FALSE}
+mallorca_map <- get_stamenmap(
+    bbox = c(left = 2.2, bottom = 39.2, right = 3.7, top = 40), 
+    maptype = "toner",
+    zoom = 8
+)
+
+ggmap(mallorca_map) +
+  geom_point(data = mallorca_bike_day7, 
+            aes(x = lon, y = lat, color = "red"),
+            size = .4) +
+  geom_path(data= mallorca_bike_day7, 
+            aes(x = lon, y = lat, color = as.factor(ele)))+
+  transition_reveal(time)+
+  labs(title = "Lisa's Mallorca Bike Ride", 
+       subtitle = "Time: {frame_along}",
+       x = "",
+       y = "") +
+  theme_map()
+
+anim_save("LisaMallorcaRide.gif")
+```
+```{r}
+knitr::include_graphics("LisaMallorcaRide.gif")
+```
+
   
   5. In this exercise, you get to meet my sister, Heather! She is a proud Mac grad, currently works as a Data Scientist at 3M where she uses R everyday, and for a few years (while still holding a full-time job) she was a pro triathlete. You are going to map one of her races. The data from each discipline of the Ironman 70.3 Pan Am championships, Panama is in a separate file - `panama_swim`, `panama_bike`, and `panama_run`. Create a similar map to the one you created with my cycling data. You will need to make some small changes: 1. combine the files (HINT: `bind_rows()`, 2. make the leading dot a different color depending on the event (for an extra challenge, make it a different image using `geom_image()!), 3. CHALLENGE (optional): color by speed, which you will need to compute on your own from the data. You can read Heather's race report [here](https://heatherlendway.com/2016/02/10/ironman-70-3-pan-american-championships-panama-race-report/). She is also in the Macalester Athletics [Hall of Fame](https://athletics.macalester.edu/honors/hall-of-fame/heather-lendway/184) and still has records at the pool. 
   
